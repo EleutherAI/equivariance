@@ -1,5 +1,5 @@
 import numpy as np
-from utils import AffineMap
+from maps import AffineMap
 
 '''
 Affine Map Tests
