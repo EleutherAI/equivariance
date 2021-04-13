@@ -1,5 +1,6 @@
 import numpy as np
 from math import floor, sqrt
+from dataclasses import dataclass
 
 '''
 Defines an affine map
@@ -22,19 +23,16 @@ class AffineMap():
     def __init__(self, A, t):
         self.A = A
         self.t = t
+        assert self.A.shape[0] == self.t.shape[0], "Dimensions of matrices in AffineMap must match"
 
-    @classmethod
-    def fromParams(cls, params):
+    def apply(self, x):
         '''
-
-        :param params: a list of doubles
-        :return: AffineMap
+        Applies the affine map to an input. Returns y = Ax + t
+        :param x: numpy array
+        :return: numpy array
         '''
-        dim = getDim(len(params))
-        assert (len(params) == (dim**2 + dim)), "AffineMap dimension should satisfy d^2 + d = numParams"
+        return self.A @ x + self.t
 
-        A = np.reshape(np.array(params[: dim**2]), (dim, dim))
-        t = np.array([params[dim**2 + i] for i in range(dim)])
-        return cls(A, t)
-
-
+class Similitude(AffineMap):
+    def __init__(self):
+        pass
