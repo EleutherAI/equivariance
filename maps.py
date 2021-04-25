@@ -23,8 +23,15 @@ class AffineMap():
         '''
         return self.transform @ x + self.t
 
+    def invert(self):
+
+        inverse = np.linalg.inv(self.transform)
+        translation = -1 * (inverse @ self.t)
+        AffineMap(inverse, translation)
+
 class Similitude(AffineMap):
     def __init__(self, scalar, rotation, translation):
+        self.scalar = scalar
         self.transform = scalar * rotation
         self.t = translation
 
