@@ -50,7 +50,7 @@ class EM():
     def codes_at_depth(self, vals, depth):
         return [list(x) for x in product(vals, repeat=depth)]
 
-    def compute_code_values(self, dim):
+    def compute_code_values(self, data_dim, dim):
         '''
 
         :return:
@@ -76,10 +76,23 @@ class EM():
                 scalar *= m.scalar
                 base_trans = m.apply(base_trans) # todo test this
 
-            translations.append(base_trans)
+            tiled = np.tile(base_trans, (data_dim, 1))
+            translations.append(tiled)
             scalars.append(scalar)
-        
-        return np.array(codes), np.array(code_weights), np.array(depth_probs), np.array(scalars), np.array(translations)
+
+        codes = np.array(codes)
+        code_weights = np.array(code_weights)
+        depth_probs = np.array(depth_probs)
+        scalars = np.array(scalars)
+        translations = np.stack(translations, axis = 2)
+
+        # get dimensions right, want there to be (n, 1, m) where m = len(codes)
+        codes = np.reshape(np.tile(codes, (data_dim,1)),(data_dim, 1, codes.shape[1]))
+        code_weights = np.reshape(np.tile(code_weights, (data_dim,1)),(data_dim, 1, code_weights.shape[1]))
+        depth_probs = np.reshape(np.tile(depth_probs, (data_dim,1)),(data_dim, 1, depth_probs.shape[1]))
+        scalars = np.reshape(np.tile(scalars, (data_dim,1)),(data_dim, 1, scalars.shape[1]))
+
+        return codes, code_weights, depth_probs, scalars, translations
 
 
 
