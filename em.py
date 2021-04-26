@@ -36,14 +36,22 @@ class EM():
         '''
         # apply the inverse post transform so we can just deal with the code IFS components
         inverse_map = self.post_transform.invert()
+        h = data.shape[1]
         transformed_data = np.apply_along_axis(inverse_map.apply, 1, data) # transforms each data pt by the inverse map todo test
         codes, code_weights, depth_probs, scalars, translations = self.compute_code_values(data.shape[0], data.shape[1])
-        
+        data = np.tile(data, (1,1,len(codes)))
 
+        X_diff = data - translations
+        scale_factor = -1 * h * np.log(scalars)
 
-        base_scale = 1
-        base_similitude = AffineMap(np.eye(data.shape[1]), np.zeros((data.shape[1]),))
-        pass
+        # here we want to take the dot product of each row with itself and sum along the middle axis to end with dim nxm
+        dot_product = np.einsum('ijk,ijk-> ik', X_diff, X_diff)
+
+        # -hlog(s) - (X dot X) / (2 * s^2)
+        norm_log_prob = scale_factor - (np.divide(dot_product, 2 * np.square(scalars)))
+
+        p = depth_probs + code_weights + norm_log_prob
+        return p
 
     def m_step(self, data):
         pass
@@ -88,10 +96,10 @@ class EM():
         translations = np.stack(translations, axis = 2)
 
         # get dimensions right, want there to be (n, 1, m) where m = len(codes)
-        codes = np.reshape(np.tile(codes, (data_dim,1)),(data_dim, 1, codes.shape[1]))
-        code_weights = np.reshape(np.tile(code_weights, (data_dim,1)),(data_dim, 1, code_weights.shape[1]))
-        depth_probs = np.reshape(np.tile(depth_probs, (data_dim,1)),(data_dim, 1, depth_probs.shape[1]))
-        scalars = np.reshape(np.tile(scalars, (data_dim,1)),(data_dim, 1, scalars.shape[1]))
+        codes = np.tile(codes, (data_dim,1))
+        code_weights = np.tile(code_weights, (data_dim,1))
+        depth_probs = np.tile(depth_probs, (data_dim,1))
+        scalars = np.tile(scalars, (data_dim,1))
 
         return codes, code_weights, depth_probs, scalars, translations
 
