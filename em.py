@@ -41,7 +41,7 @@ class EM():
         codes, code_weights, depth_probs, scalars, translations = self.compute_code_values(data.shape[0], data.shape[1])
         data = np.tile(data, (1,1,len(codes)))
 
-        X_diff = data - translations
+        X_diff = transformed_data - translations
         scale_factor = -1 * h * np.log(scalars)
 
         # here we want to take the dot product of each row with itself and sum along the middle axis to end with dim nxm
