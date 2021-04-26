@@ -40,8 +40,8 @@ class EM():
         inverse_map = self.post_transform.invert()
         h = data.shape[1]
         transformed_data = np.apply_along_axis(inverse_map.apply, 1, data) # transforms each data pt by the inverse map todo test
-        codes, code_weights, depth_probs, scalars, translations = self.compute_code_values(data.shape[0], data.shape[1])
-        transformed_data = np.tile(transformed_data, (1,1,len(codes)))
+        code_weights, depth_probs, scalars, translations = self.compute_code_values(data.shape[0], data.shape[1])
+        transformed_data = np.tile(transformed_data, (1,1,len(self.codes)))
 
         X_diff = transformed_data - translations
         scale_factor = -1 * h * np.log(scalars)
@@ -58,14 +58,12 @@ class EM():
         sums = p.sum(axis = 1)
         p = p / sums[:, np.newaxis]
 
-        pk_inds = []
+        # pull out the Pk submatrices (columns associated with codes that start with k for each k)
+        pks = []
         for i in range(len(self.weights)):
-            inds = []
-            for j in range(len(codes)):
+            pks.append(p[:, self.pk_map[i]])
 
-
-
-        return p
+        return p, pks
 
     def m_step(self, data):
         pass
@@ -76,13 +74,14 @@ class EM():
     @cached_property
     def codes(self):
         '''
-
+        The codes only depend on the number of maps, which should be constant, so we compute once and cache
         :return:
         '''
         codons = np.arange(len(self.weights))
         codes = []
         pk_map = {}
-        # we'll precompute the map for the indices of codes that start with k for each k in 0 to the number of maps
+
+        # precompute the map for the indices of codes that start with k for each k in 0 to the number of maps
         for i in range(self.depth):
             codes_temp = self.codes_at_depth(codons, i)
             codes += codes_temp
@@ -94,23 +93,19 @@ class EM():
                     pk_map[code[0]] = [len(codes) + j]
 
         self.pk_map = pk_map
-        self.codes = codes
+        self.codes = np.array(codes)
 
     def compute_code_values(self, data_dim, dim):
         '''
 
         :return:
         '''
-        codons = np.arange(len(self.weights))
-        codes = []
         depth_probs = []
         code_weights = []
         scalars = []
         translations = []
-        for i in range(self.depth):
-            codes += self.codes_at_depth(codons, i)
 
-        for code in codes:
+        for code in self.codes:
             code_log_prob = np.log(self.weights[code]).sum()
             depth_log = self.depth_weights[len(code)]
             code_weights.append(code_log_prob)
@@ -126,19 +121,18 @@ class EM():
             translations.append(tiled)
             scalars.append(scalar)
 
-        codes = np.array(codes)
         code_weights = np.array(code_weights)
         depth_probs = np.array(depth_probs)
         scalars = np.array(scalars)
         translations = np.stack(translations, axis = 2)
 
         # get dimensions right, want there to be (n, 1, m) where m = len(codes)
-        codes = np.tile(codes, (data_dim,1))
+        # codes = np.tile(codes, (data_dim,1))
         code_weights = np.tile(code_weights, (data_dim,1))
         depth_probs = np.tile(depth_probs, (data_dim,1))
         scalars = np.tile(scalars, (data_dim,1))
 
-        return codes, code_weights, depth_probs, scalars, translations
+        return code_weights, depth_probs, scalars, translations
 
 
 
