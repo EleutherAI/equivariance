@@ -1,6 +1,7 @@
 import numpy as np
 from maps import *
 from itertools import product
+from functools import cached_property
 
 class EM():
     def __init__(self, maps=None, weights=None, depth=100):
@@ -9,6 +10,7 @@ class EM():
         self.depth_weights = np.log(np.ones((depth,)))
         self.depth = depth
         self.post_transform = None
+        self.pk_map = {}
 
     def train(self, data):
         if not self.maps:
@@ -39,7 +41,7 @@ class EM():
         h = data.shape[1]
         transformed_data = np.apply_along_axis(inverse_map.apply, 1, data) # transforms each data pt by the inverse map todo test
         codes, code_weights, depth_probs, scalars, translations = self.compute_code_values(data.shape[0], data.shape[1])
-        data = np.tile(data, (1,1,len(codes)))
+        transformed_data = np.tile(transformed_data, (1,1,len(codes)))
 
         X_diff = transformed_data - translations
         scale_factor = -1 * h * np.log(scalars)
@@ -51,6 +53,18 @@ class EM():
         norm_log_prob = scale_factor - (np.divide(dot_product, 2 * np.square(scalars)))
 
         p = depth_probs + code_weights + norm_log_prob
+
+        # normalize rows
+        sums = p.sum(axis = 1)
+        p = p / sums[:, np.newaxis]
+
+        pk_inds = []
+        for i in range(len(self.weights)):
+            inds = []
+            for j in range(len(codes)):
+
+
+
         return p
 
     def m_step(self, data):
@@ -58,6 +72,29 @@ class EM():
 
     def codes_at_depth(self, vals, depth):
         return [list(x) for x in product(vals, repeat=depth)]
+
+    @cached_property
+    def codes(self):
+        '''
+
+        :return:
+        '''
+        codons = np.arange(len(self.weights))
+        codes = []
+        pk_map = {}
+        # we'll precompute the map for the indices of codes that start with k for each k in 0 to the number of maps
+        for i in range(self.depth):
+            codes_temp = self.codes_at_depth(codons, i)
+            codes += codes_temp
+            for j in range(len(codes_temp)):
+                code = codes_temp[j]
+                if code[0] in pk_map:
+                    pk_map[code[0]].append(len(codes) + j)
+                else:
+                    pk_map[code[0]] = [len(codes) + j]
+
+        self.pk_map = pk_map
+        self.codes = codes
 
     def compute_code_values(self, data_dim, dim):
         '''
