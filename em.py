@@ -37,7 +37,8 @@ class EM():
         # apply the inverse post transform so we can just deal with the code IFS components
         inverse_map = self.post_transform.invert()
         transformed_data = np.apply_along_axis(inverse_map.apply, 1, data) # transforms each data pt by the inverse map todo test
-
+        codes, code_weights, depth_probs, scalars, translations = self.compute_code_values(data.shape[0], data.shape[1])
+        
 
 
         base_scale = 1
