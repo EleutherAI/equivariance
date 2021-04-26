@@ -68,6 +68,32 @@ class EM():
     def m_step(self, data):
         pass
 
+    def update_depths(self, data, p):
+        '''
+        Sum the elements in P for the columns j where len(codes[j]) == d for each depth
+        :param data:
+        :param p:
+        :return:
+        '''
+        d_inds = {}
+        for j in range(len(self.codes)):
+            c = self.codes[j]
+            d = len(c)
+            if d in d_inds:
+                d_inds[d].append(j)
+            else:
+                d_inds[d] = [j]
+
+        for l in range(self.depth):
+            Pij = p[:, d_inds[l]]
+            logsum = np.log(np.sum(Pij))
+            self.depth_weights[l] = logsum
+
+    def update_t(self):
+        pass
+
+
+
     def codes_at_depth(self, vals, depth):
         return [list(x) for x in product(vals, repeat=depth)]
 
@@ -126,7 +152,7 @@ class EM():
         scalars = np.array(scalars)
         translations = np.stack(translations, axis = 2)
 
-        # get dimensions right, want there to be (n, 1, m) where m = len(codes)
+        # get dimensions right, want there to be (n, m) where m = len(codes)
         # codes = np.tile(codes, (data_dim,1))
         code_weights = np.tile(code_weights, (data_dim,1))
         depth_probs = np.tile(depth_probs, (data_dim,1))
