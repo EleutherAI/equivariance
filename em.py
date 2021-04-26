@@ -89,11 +89,32 @@ class EM():
             logsum = np.log(np.sum(Pij))
             self.depth_weights[l] = logsum
 
-    def update_t(self):
+    def update_weights(self, p, pks):
+        '''
+
+        :param p:
+        :param pks:
+        :return:
+        '''
+        new_weights = []
+        for i in range(len(self.weights)):
+            new_weights.append(np.sum(pks[i]))
+        new_weights = np.array(new_weights)
+        new_weights = new_weights / np.sum(new_weights)
+        self.weights = new_weights
+
+    def update_IFS(self, p, pks, z, t):
+        '''
+
+        :param p:
+        :param pks:
+        :param z:
+        :param t:
+        :return:
+        '''
         pass
 
-
-
+    
     def codes_at_depth(self, vals, depth):
         return [list(x) for x in product(vals, repeat=depth)]
 
