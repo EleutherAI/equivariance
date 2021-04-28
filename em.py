@@ -17,13 +17,14 @@ class EM():
         if not self.maps:
             self.maps, self.weights = self.create_initial_model()
 
-        num_mixtures = len(self.maps)
-        dim = data.shape[1]
+        self.iter_once(data)
 
         pass
 
     def iter_once(self, data):
-        pass
+        p, pks, scalars, translations = self.e_step(data)
+        self.m_step(data, p, pks)
+
 
     def create_initial_model(self):
         pass
@@ -64,12 +65,28 @@ class EM():
         for i in range(len(self.weights)):
             pks.append(p[:, self.pk_map[i]])
 
-        return p, pks
+        return p, pks, scalars, translations
 
-    def m_step(self, data):
-        pass
+    def m_step(self, data, p, pks, scalars, translations):
+        '''
 
-    def update_depths(self, data, p):
+        :param data:
+        :return:
+        '''
+        self.update_depths(data)
+        self.update_weights(data,pks)
+
+        inverse_map = self.post_transform.invert()
+        transformed_data = np.apply_along_axis(inverse_map.apply, 1, data)
+        maps = self.update_maps(transformed_data, pks, translations, scalars)
+        post = self.update_post_transform(data, p, scalars, translations)
+
+
+        self.maps = maps
+        self.post_transform = post
+
+
+    def update_depths(self, p):
         '''
         Sum the elements in P for the columns j where len(codes[j]) == d for each depth
         :param data:
@@ -90,7 +107,7 @@ class EM():
             logsum = np.log(np.sum(Pij))
             self.depth_weights[l] = logsum
 
-    def update_weights(self, p, pks):
+    def update_weights(self, pks):
         '''
 
         :param p:
@@ -218,7 +235,7 @@ class EM():
         post_transform = data @ pz - (post_scalar * post_rot @ (T @ pz))
 
         return Similitude(post_scalar, post_rot, post_transform)
-    
+
     def codes_at_depth(self, vals, depth):
         return [list(x) for x in product(vals, repeat=depth)]
 
