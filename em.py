@@ -2,6 +2,7 @@ import numpy as np
 from maps import *
 from itertools import product
 from functools import cached_property
+from math import sqrt
 
 class EM():
     def __init__(self, maps=None, weights=None, depth=100):
@@ -103,7 +104,7 @@ class EM():
         new_weights = new_weights / np.sum(new_weights)
         self.weights = new_weights
 
-    def update_IFS(self, p, pks, z, t):
+    def update_maps(self, transformed_data, pks, translations, scalars):
         '''
 
         :param p:
@@ -112,9 +113,84 @@ class EM():
         :param t:
         :return:
         '''
-        pass
+        maps = []
+        for i in range(len(self.weights)):
+            Z = self.create_z(i, scalars)
+            Pk = pks[i]
+            p_k_z = np.sum(Pk @ Z)
+            T = self.create_T(translations)[self.pk_map[i]]
+            ones = np.ones((Z.shape[1],)).T
 
-    
+            y_k = (1 / p_k_z) * (transformed_data @ Pk @ Z @ ones)
+            t_k = (1 / p_k_z) * (T @ Z @ Pk.T @ ones)
+
+            Y_k = transformed_data - np.outer(y_k, ones)
+            T_k = T - np.outer(t_k, ones)
+
+            A = Y_k @ Pk @ Z @ T_k.T
+            u, s, v_t = np.linalg.svd(A)
+
+            # should look like 1,1,1,1,..., det(UV_T)
+            rot_svd_diag = np.ones(a.shape[1])
+            rot_svd_diag[-1] = np.linalg.det(u @ v_t)
+
+            r_diag = np.diag(rot_svd_diag)
+
+            rot = u @ r_diag @ v_t
+
+            # solve the scalar equation
+            a = np.einsum('ii', (Y_k.T @ (self.depth * Pk @ Z @ ones) @ Y_k)) # trace
+            b = np.einsum('ii', (T_k @ Z @ Pk.T @ Y_k.T @ rot))
+            c = -1 * transformed_data.shape[1] * p_k_z
+            s_hat = self.solve_scale(a,b,c)
+
+            t_hat = y_k - s_hat * rot @ t_k
+
+            sim = Similitude(s_hat, rot, t_hat)
+            maps.append(sim)
+
+        return maps
+
+    def create_z(self, i, scalars):
+        '''
+        Creates the Z matrix, a diagonal of scalars associated with codes that don't begin with i, given i
+        and one row of the scalars matrix
+        :param i:
+        :param scalars:
+        :return:
+        '''
+        diagonal = np.power(scalars[self.pk_map[i]], -2)
+        return np.diag(diagonal)
+
+    def create_T(self, translations):
+        '''
+
+        :param translations:
+        :return:
+        '''
+        return translations[0, :, :]
+
+    def solve_scale(self, a, b, c):
+        '''
+        Solves quadratic equation for scale
+        :param a:
+        :param b:
+        :param c:
+        :return:
+        '''
+        bac = b**2 - 4 * a * c
+        plus_sol = (-1 * b + sqrt(bac))/(2 * a)
+        minus_sol = (-1 * b - sqrt(bac))/(2 * a)
+        plus_sol = max(1 / plus_sol, 0)
+        minus_sol = max(1 / minus_sol, 0)
+        sol = max(plus_sol, minus_sol)
+        assert sol > 0
+        return sol
+
+
+
+
+
     def codes_at_depth(self, vals, depth):
         return [list(x) for x in product(vals, repeat=depth)]
 
