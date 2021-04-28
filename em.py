@@ -187,10 +187,38 @@ class EM():
         assert sol > 0
         return sol
 
+    def update_post_transform(self, data, p, scalars, translations):
+        '''
 
+        :return:
+        '''
+        z = np.power(np.diag(scalars), -2)
+        T = self.create_T(translations)
+        ones = np.ones(z.shape[0])
 
+        pz = (p @ z) @ ones
+        x_centered = data - np.outer(data @ pz, ones)
+        t_centered = T - np.outer(T @ pz, ones)
 
+        # get postr transform rotation
+        total_val = x_centered @ p @ z @ t_centered.T
+        u, s, v_t = np.linalg.svd(total_val)
+        rot_svd_diag = np.ones(u.shape[1])
+        rot_svd_diag[-1] = np.linalg.det(u @ v_t)
+        post_rot = u @ rot_svd_diag @ v_t
 
+        # post transform scalar
+        a = data.T @ (self.depth * p @ z @ ones) @ data
+        b = T @ z @ p.T @ data.T @ post_rot
+        c = -1 * data.shape[1] * np.sum(p)
+        a = np.einsum('ii', a)
+        b = np.einsum('ii', b)
+        post_scalar = self.solve_scale(a,b,c)
+
+        post_transform = data @ pz - (post_scalar * post_rot @ (T @ pz))
+
+        return Similitude(post_scalar, post_rot, post_transform)
+    
     def codes_at_depth(self, vals, depth):
         return [list(x) for x in product(vals, repeat=depth)]
 
