@@ -5,7 +5,7 @@ from functools import cached_property
 from math import sqrt
 
 class EM():
-    def __init__(self, maps=None, weights=None, depth=100):
+    def __init__(self, maps=None, weights=None, depth=3):
         self.maps = maps
         self.weights = weights
         self.depth_weights = np.log(np.ones((depth,)))
@@ -19,11 +19,9 @@ class EM():
 
         self.iter_once(data)
 
-        pass
-
     def iter_once(self, data):
         p, pks, scalars, translations = self.e_step(data)
-        self.m_step(data, p, pks)
+        self.m_step(data, p, pks, scalars, translations)
 
 
     def create_initial_model(self):
