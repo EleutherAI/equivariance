@@ -42,7 +42,7 @@ class EM():
         h = data.shape[1]
         transformed_data = np.apply_along_axis(inverse_map.apply, 1, data) # transforms each data pt by the inverse map todo test
         code_weights, depth_probs, scalars, translations = self.compute_code_values(data.shape[0], data.shape[1])
-        transformed_data = np.tile(transformed_data, (1,1,len(self.codes)))
+        transformed_data = np.repeat(transformed_data[:,:,None], len(self.codes), axis=2)
 
         X_diff = transformed_data - translations
         scale_factor = -1 * h * np.log(scalars)
@@ -272,10 +272,9 @@ class EM():
         code_weights = []
         scalars = []
         translations = []
-        print(self.codes)
         for code in self.codes:
             code_log_prob = np.log(self.weights[code]).sum()
-            depth_log = self.depth_weights[len(code)]
+            depth_log = self.depth_weights[len(code) - 1]
             code_weights.append(code_log_prob)
             depth_probs.append(depth_log)
 
