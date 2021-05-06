@@ -1,7 +1,7 @@
 import numpy as np
 from maps import *
 from itertools import product
-from functools import cached_property
+from cached_property import cached_property
 from math import sqrt
 
 class EM():
@@ -12,6 +12,7 @@ class EM():
         self.depth = depth
         self.post_transform = None
         self.pk_map = {}
+        # self.codes = []
 
     def train(self, data):
         if not self.maps:
@@ -249,17 +250,18 @@ class EM():
 
         # precompute the map for the indices of codes that start with k for each k in 0 to the number of maps
         for i in range(self.depth):
-            codes_temp = self.codes_at_depth(codons, i)
+            codes_temp = self.codes_at_depth(codons, i+1)
             codes += codes_temp
             for j in range(len(codes_temp)):
                 code = codes_temp[j]
+
                 if code[0] in pk_map:
                     pk_map[code[0]].append(len(codes) + j)
                 else:
                     pk_map[code[0]] = [len(codes) + j]
-
         self.pk_map = pk_map
-        self.codes = np.array(codes)
+        # self.codes = codes
+        return codes
 
     def compute_code_values(self, data_dim, dim):
         '''
@@ -270,7 +272,7 @@ class EM():
         code_weights = []
         scalars = []
         translations = []
-
+        print(self.codes)
         for code in self.codes:
             code_log_prob = np.log(self.weights[code]).sum()
             depth_log = self.depth_weights[len(code)]
