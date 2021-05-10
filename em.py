@@ -74,8 +74,8 @@ class EM():
         :param data:
         :return:
         '''
-        self.update_depths(data)
-        self.update_weights(data,pks)
+        self.update_depths(p)
+        self.update_weights(pks)
 
         inverse_map = self.post_transform.invert()
         transformed_data = np.apply_along_axis(inverse_map.apply, 1, data)
@@ -134,9 +134,10 @@ class EM():
         maps = []
         for i in range(len(self.weights)):
             Z = self.create_z(i, scalars)
+            print(Z.shape)
             Pk = pks[i]
             p_k_z = np.sum(Pk @ Z)
-            T = self.create_T(translations)[self.pk_map[i]]
+            T = self.create_T(translations)[:,self.pk_map[i]]
             ones = np.ones((Z.shape[1],)).T
 
             y_k = (1 / p_k_z) * (transformed_data @ Pk @ Z @ ones)
@@ -178,7 +179,7 @@ class EM():
         :return:
         '''
         diagonal = np.power(scalars[self.pk_map[i]], -2)
-        return np.diag(diagonal)
+        return np.diag(np.diag(diagonal))
 
     def create_T(self, translations):
         '''
@@ -296,7 +297,7 @@ class EM():
         code_weights = np.array(code_weights)
         depth_probs = np.array(depth_probs)
         scalars = np.array(scalars)
-        translations = np.stack(translations, axis = 2)
+        translations = np.stack(translations, axis=2)
 
         # get dimensions right, want there to be (n, m) where m = len(codes)
         # codes = np.tile(codes, (data_dim,1))
