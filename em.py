@@ -62,6 +62,8 @@ class EM():
         # pull out the Pk submatrices (columns associated with codes that start with k for each k)
         pks = []
         for i in range(len(self.weights)):
+            # print(p.shape)
+            # print(self.pk_map[i])
             pks.append(p[:, self.pk_map[i]])
 
         return p, pks, scalars, translations
@@ -250,15 +252,18 @@ class EM():
 
         # precompute the map for the indices of codes that start with k for each k in 0 to the number of maps
         for i in range(self.depth):
-            codes_temp = self.codes_at_depth(codons, i+1)
+            pre_len = len(codes)
+            codes_temp = self.codes_at_depth(codons, i)
             codes += codes_temp
+            if codes_temp == [[]]:
+                continue
             for j in range(len(codes_temp)):
                 code = codes_temp[j]
 
                 if code[0] in pk_map:
-                    pk_map[code[0]].append(len(codes) + j)
+                    pk_map[code[0]].append(pre_len + j)
                 else:
-                    pk_map[code[0]] = [len(codes) + j]
+                    pk_map[code[0]] = [pre_len + j]
         self.pk_map = pk_map
         # self.codes = codes
         return codes
