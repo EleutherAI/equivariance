@@ -8,7 +8,7 @@ class EM():
     def __init__(self, maps=None, weights=None, depth=3):
         self.maps = maps
         self.weights = weights
-        self.depth_weights = np.log(np.ones((depth,)))
+        self.depth_weights = np.log(np.ones((depth,)) / depth)
         self.depth = depth
         self.post_transform = None
         self.pk_map = {}
@@ -134,23 +134,24 @@ class EM():
         maps = []
         for i in range(len(self.weights)):
             Z = self.create_z(i, scalars)
-            print(Z.shape)
+
             Pk = pks[i]
             p_k_z = np.sum(Pk @ Z)
             T = self.create_T(translations)[:,self.pk_map[i]]
             ones = np.ones((Z.shape[1],)).T
 
-            y_k = (1 / p_k_z) * (transformed_data @ Pk @ Z @ ones)
-            t_k = (1 / p_k_z) * (T @ Z @ Pk.T @ ones)
+            y_k = (1 / p_k_z) * (transformed_data.T @ Pk @ Z @ ones)
+            t_k = (1 / p_k_z) * (T @ Z @ Pk.T @ np.ones((Pk.shape[0],)))
 
-            Y_k = transformed_data - np.outer(y_k, ones)
-            T_k = T - np.outer(t_k, ones)
+            Y_k = transformed_data.T - np.outer(y_k, np.ones((transformed_data.shape[0],)))
+
+            T_k = T - np.outer(t_k, np.ones((T.shape[1],)))
 
             A = Y_k @ Pk @ Z @ T_k.T
             u, s, v_t = np.linalg.svd(A)
 
             # should look like 1,1,1,1,..., det(UV_T)
-            rot_svd_diag = np.ones(a.shape[1])
+            rot_svd_diag = np.ones(A.shape[1])
             rot_svd_diag[-1] = np.linalg.det(u @ v_t)
 
             r_diag = np.diag(rot_svd_diag)
@@ -158,8 +159,9 @@ class EM():
             rot = u @ r_diag @ v_t
 
             # solve the scalar equation
-            a = np.einsum('ii', (Y_k.T @ (self.depth * Pk @ Z @ ones) @ Y_k)) # trace
-            b = np.einsum('ii', (T_k @ Z @ Pk.T @ Y_k.T @ rot))
+            inner = np.diag(Pk @ Z @ ones)
+            a = np.einsum('ii', (Y_k @ inner @ Y_k.T)) # trace
+            b = np.einsum('ii', (T_k @ Z @ Pk.T @ Y_k @ rot))
             c = -1 * transformed_data.shape[1] * p_k_z
             s_hat = self.solve_scale(a,b,c)
 
