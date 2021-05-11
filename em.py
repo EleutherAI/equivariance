@@ -162,6 +162,7 @@ class EM():
             inner = np.diag(Pk @ Z @ ones)
             a = np.einsum('ii', (Y_k @ inner @ Y_k.T)) # trace
             b = np.einsum('ii', (T_k @ Z @ Pk.T @ Y_k.T @ rot))
+            # print("rot", rot.shape)
             c = -1 * transformed_data.shape[1] * p_k_z
             s_hat = self.solve_scale(a,b,c)
 
@@ -213,30 +214,38 @@ class EM():
 
         :return:
         '''
-        z = np.power(np.diag(scalars), -2)
+        z = np.diag(np.power(np.diag(scalars), -2))
         T = self.create_T(translations)
         ones = np.ones(z.shape[0])
 
-        pz = (p @ z) @ ones
-        x_centered = data - np.outer(data @ pz, ones)
-        t_centered = T - np.outer(T @ pz, ones)
+        pz = 1 / np.sum(p @ z)
+        # print(data.shape, p.shape, z.shape, ones.shape)
+        xp = pz * (data.T @ p @ z @ ones)
+        tp = pz * (T @ z @ p.T @ np.ones((p.shape[0],)))
+
+        x_centered = data.T - np.outer(xp, np.ones((data.shape[0],))) # shape (dim , n)
+        # print(x_centered.shape)
+        # print(T.shape, (p @ z @ np.ones((p.shape[0], ))).shape)
+        t_centered = T - np.outer(tp, np.ones((T.shape[1]),))
+        print(x_centered.shape, t_centered.shape)
 
         # get postr transform rotation
         total_val = x_centered @ p @ z @ t_centered.T
         u, s, v_t = np.linalg.svd(total_val)
         rot_svd_diag = np.ones(u.shape[1])
         rot_svd_diag[-1] = np.linalg.det(u @ v_t)
+        rot_svd_diag = np.diag(rot_svd_diag)
         post_rot = u @ rot_svd_diag @ v_t
 
         # post transform scalar
-        a = data.T @ (self.depth * p @ z @ ones) @ data
-        b = T @ z @ p.T @ data.T @ post_rot
+        a = data.T @ np.diag(p @ z @ ones) @ data
+        b = T @ z @ p.T @ data @ post_rot
         c = -1 * data.shape[1] * np.sum(p)
         a = np.einsum('ii', a)
         b = np.einsum('ii', b)
         post_scalar = self.solve_scale(a,b,c)
 
-        post_transform = data @ pz - (post_scalar * post_rot @ (T @ pz))
+        post_transform = xp - (post_scalar * post_rot @ tp)
 
         return Similitude(post_scalar, post_rot, post_transform)
 
