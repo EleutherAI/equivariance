@@ -161,7 +161,7 @@ class EM():
             # solve the scalar equation
             inner = np.diag(Pk @ Z @ ones)
             a = np.einsum('ii', (Y_k @ inner @ Y_k.T)) # trace
-            b = np.einsum('ii', (T_k @ Z @ Pk.T @ Y_k @ rot))
+            b = np.einsum('ii', (T_k @ Z @ Pk.T @ Y_k.T @ rot))
             c = -1 * transformed_data.shape[1] * p_k_z
             s_hat = self.solve_scale(a,b,c)
 
