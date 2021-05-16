@@ -12,17 +12,6 @@ from jax import vmap
 
 import matplotlib.pyplot as plt
 
-def equivariance_err(rin, rout, G, mb):
-    rin,rout = trainset.rep_in(G),trainset.rep_out(G)
-    x,y = mb
-    x,y= jnp.array(x),jnp.array(y)
-    gs = G.samples(x.shape[0])
-    rho_gin = vmap(rin.rho_dense)(gs)
-    rho_gout = vmap(rout.rho_dense)(gs)
-    y1 = model((rho_gin@x[...,None])[...,0],training=False)
-    y2 = (rho_gout@model(x,training=False)[...,None])[...,0]
-    return rel_err(y1,y2)
-
 
 def rel_err(a,b):
     return jnp.sqrt(((a-b)**2).mean())/(jnp.sqrt((a**2).mean())+jnp.sqrt((b**2).mean()))#
@@ -70,7 +59,18 @@ def train_emlp(G, train=Inertia(1000), test=Inertia(2000), num_layers=3, channel
     if not epoch % 10:
         test_losses.append(np.mean([loss(jnp.array(x), jnp.array(y)) for (x,y) in testloader]))
   
-  print(f"Average test equivariance error {np.mean([equivariance_err(mb) for mb in testloader]):.2e}")
+  def equivariance_err(G, train, mb):
+    rin,rout = train.rep_in(G),train.rep_out(G)
+    x,y = mb
+    x,y= jnp.array(x),jnp.array(y)
+    gs = G.samples(x.shape[0])
+    rho_gin = vmap(rin.rho_dense)(gs)
+    rho_gout = vmap(rout.rho_dense)(gs)
+    y1 = model((rho_gin@x[...,None])[...,0],training=False)
+    y2 = (rho_gout@model(x,training=False)[...,None])[...,0]
+    return rel_err(y1,y2)
+
+  print(f"Average test equivariance error {np.mean([equivariance_err(G, train, mb) for mb in testloader]):.2e}")
 
         
  
