@@ -71,7 +71,7 @@ def train_emlp(G, train=Inertia(1000), test=Inertia(2000), num_layers=3, channel
     return rel_err(y1,y2)
 
   print(f"Average test equivariance error {np.mean([equivariance_err(G, train, mb) for mb in testloader]):.2e}")
-
+   return train_losses, test_losses
         
  
   
