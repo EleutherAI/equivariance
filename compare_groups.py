@@ -41,7 +41,7 @@ def compare_groups(grps, train=Inertia(1000), test=Inertia(2000), num_layers=3, 
 def train_emlp(G, train=Inertia(1000), test=Inertia(2000), num_layers=3, channels=384, batch_size=500, lr=3e-3, num_epochs=500):
   
   print(f"Input type: {train.rep_in(G)}, output type: {train.rep_out(G)}")
-  model = emlp.nn.EMLP(train.rep_in, train.rep_out, group=G, num_layers, channels)
+  model = emlp.nn.EMLP(train.rep_in, train.rep_out, group=G, num_layers=cum_layers, ch=channels)
   
   opt = objax.optimizer.Adam(model.vars())
 
