@@ -16,7 +16,8 @@ class EM():
         self.depth = depth
         self.post_transform = None
         self.pk_map = {}
-        # self.codes = []
+
+        self.split_variance = 0.01
 
     def train(self, data):
         if self.maps is None:
@@ -24,7 +25,7 @@ class EM():
         if self.is_centered:
             self.post_transform = identity_similitude(data.shape[1])
         else:
-            self.post_transform = Similitude(1.0, np.eye(data.shape[1]), np.mean(data,axis=0))
+            self.post_transform = Similitude(1.0, np.eye(data.shape[1]), np.mean(data, axis=0))
 
         self.iter_once(data)
 
@@ -174,13 +175,53 @@ class EM():
             # print("rot", rot.shape)
             c = -1 * transformed_data.shape[1] * p_k_z
             s_hat = self.solve_scale(a,b,c)
+            if s_hat is None: # if singularity, then we need to split the remaining maps
+                maps.append(None)
+                continue
 
             t_hat = y_k - s_hat * rot @ t_k
 
             sim = Similitude(s_hat, rot, t_hat)
             maps.append(sim)
 
-        return maps
+        final_maps, final_weights = self.split_maps(maps, self.weights)
+        self.weights = final_weights
+        return final_maps
+
+    def split_maps(self, maps, weights):
+        '''
+
+        :param maps:
+        :return:
+        '''
+        null_inds = []
+        not_null = []
+        for i in range(len(maps)):
+            if maps[i] is None:
+                null_inds.append(i)
+            else:
+                not_null.append(i)
+        if not not_null:
+            raise Exception("All maps in this IFS are null")
+
+        if not null_inds:
+            return maps, weights
+
+        # random choice of a not null map to split
+        choice_ind = np.random.choice(not_null)
+        chosen_map = maps[choice_ind]
+        split_weight = weights[choice_ind] / len(null_inds)
+        null_inds.append(choice_ind)
+
+        for null_val in null_inds:
+            base_trans = chosen_map.t
+            rand = np.random.sample((base_trans.shape[0],)) * self.split_variance
+            new_trans = base_trans + rand
+            sim = Similitude(chosen_map.scalar, chosen_map.rotation, new_trans)
+            maps[null_val] = sim
+            weights[null_val] = split_weight
+
+        return maps, weights
 
     def create_z(self, i, scalars):
         '''
@@ -215,7 +256,9 @@ class EM():
         plus_sol = max(1 / plus_sol, 0)
         minus_sol = max(1 / minus_sol, 0)
         sol = max(plus_sol, minus_sol)
-        assert sol > 0
+        if sol <= 0:
+            print("found solution less than zero, adding null")
+            sol = None
         return sol
 
     def update_post_transform(self, data, p, scalars, translations):
