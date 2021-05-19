@@ -1,11 +1,15 @@
 import numpy as np
 from maps import *
+from utils import identity_similitude, sphere_init
 from itertools import product
 from cached_property import cached_property
 from math import sqrt
 
 class EM():
-    def __init__(self, maps=None, weights=None, depth=3):
+    def __init__(self, maps=None, weights=None, num_components = 3, depth=3, is_centered = False):
+        self.is_centered = is_centered
+        self.num_components = num_components
+
         self.maps = maps
         self.weights = weights
         self.depth_weights = np.log(np.ones((depth,)) / depth)
@@ -15,8 +19,12 @@ class EM():
         # self.codes = []
 
     def train(self, data):
-        if not self.maps:
-            self.maps, self.weights = self.create_initial_model()
+        if self.maps is None:
+            self.create_initial_ifs(data.shape[1], 0.5)
+        if self.is_centered:
+            self.post_transform = identity_similitude(data.shape[1])
+        else:
+            self.post_transform = Similitude(1.0, np.eye(data.shape[1]), np.mean(data,axis=0))
 
         self.iter_once(data)
 
@@ -25,8 +33,9 @@ class EM():
         self.m_step(data, p, pks, scalars, translations)
 
 
-    def create_initial_model(self):
-        pass
+    def create_initial_ifs(self, dim, scale):
+        self.maps = np.array(sphere_init(dim, self.num_components, 1, scale))
+        self.weights = np.log(np.ones((self.num_components,)) / self.num_components)
 
     def e_step(self, data):
         '''
