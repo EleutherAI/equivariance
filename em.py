@@ -83,7 +83,7 @@ class EM():
         post = self.update_post_transform(data, p, scalars, translations)
 
 
-        self.maps = maps
+        self.maps = np.array(maps)
         self.post_transform = post
 
 
@@ -227,7 +227,7 @@ class EM():
         # print(x_centered.shape)
         # print(T.shape, (p @ z @ np.ones((p.shape[0], ))).shape)
         t_centered = T - np.outer(tp, np.ones((T.shape[1]),))
-        print(x_centered.shape, t_centered.shape)
+        # print(x_centered.shape, t_centered.shape)
 
         # get postr transform rotation
         total_val = x_centered @ p @ z @ t_centered.T
@@ -297,6 +297,7 @@ class EM():
 
             scalar = 1
             base_trans = np.zeros((dim,))
+
             for m in self.maps[code]:
                 scalar *= m.scalar
                 base_trans = m.apply(base_trans) # todo test this
