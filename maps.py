@@ -32,6 +32,7 @@ class AffineMap():
 class Similitude(AffineMap):
     def __init__(self, scalar, rotation, translation):
         self.scalar = scalar
+        self.rotation = rotation
         self.transform = scalar * rotation
         self.t = translation
 
